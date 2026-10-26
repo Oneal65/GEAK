@@ -1,0 +1,68 @@
+{
+  "run_id": "team_knn_20261026_120638_2238851_5312",
+  "date": "2026-10-26",
+  "kernel_names": [
+    "knn"
+  ],
+  "validation_status": "accepted",
+  "box_quiet": true,
+  "held_out": false,
+  "citations": [],
+  "cards": [
+    {
+      "name": "wave-cooperative-register-top-k-plus-radix-seeded-threshold-knn-search-gfx942-both",
+      "description": "Brute-force 3-D kNN: wave-cooperative register top-k in one native-layout dispatch, then a radix-select threshold seed: ~54x geomean on gfx942",
+      "keywords": [
+        "top-k",
+        "latency-bound",
+        "dependency-chain",
+        "register-spill",
+        "dispatch-collapse",
+        "packed-valu",
+        "bit-reinterpret",
+        "host-runtime",
+        "hip-graph",
+        "anti-pattern",
+        "raw-hip",
+        "knn"
+      ],
+      "kernels": [
+        "knn_kernel_tile",
+        "knn_forward"
+      ],
+      "platforms": [
+        "gfx942"
+      ],
+      "kernel_class": "knn_search",
+      "regime": "both",
+      "key": "Brute-force point-cloud k-nearest-neighbour (3-D fp32, small k) HIP kernel behind a PyTorch extension · gfx942/MI308X · standard, transposed and self-query call paths",
+      "lifecycle": "active",
+      "layer": "learned",
+      "levers": [
+        "algo.register-topk",
+        "host.dispatch-collapse",
+        "algo.threshold-seed",
+        "compute.packed-fp32"
+      ],
+      "cost": "L3",
+      "type": "lever",
+      "confidence": "★★",
+      "effect": "~54x geomean director-verified vs frozen baseline, non-overlapping, oracle index parity on 5 shapes x 3 call paths; per-case 12-14x on the smallest (host-floored) shape, 36-88x on self-query, 45-250x on the mid/large standard and transposed cases",
+      "roofline": "latency-bound (serial per-thread N loop, scratch-spilled top-k, multi-dispatch, ~0.78 of wave cycles in dependency wait) -> host-floored on tiny shapes, latency/under-fill on mid shapes, VALU+vL1 co-limited on self-query at ~0.4-0.45 VALU and TA busy; HBM/L2 not a lever",
+      "verified_on": "2026-10-26",
+      "last_seen": "2026-10-26",
+      "attempts": 1,
+      "confirms_cited": 0,
+      "confirms_blind": 0,
+      "losses": 0,
+      "title": "Register top-k in one wave, one dispatch, then seed the threshold with a radix-select",
+      "lever": "Give each query to a whole wave: lanes stride N, keep the top-k in registers (no scratch), stage refs via LDS, read both input layouts natively and write the int32 index output directly. Then seed the k-th-distance threshold with a radix-select over the first chunk so later tiles insert only a handful of candidates.",
+      "apply": "One pybind entry -> one kernel launch per call (no dist2 buffer, fill, transposes or casts). Non-negative fp32 distances order like uint32, so threshold/radix logic runs as integer compares in SGPRs; use SGPR-offset buffer loads and packed fp32 distance math to cut VALU per pair ~3x.",
+      "stack": "total ~54x geomean (director-verified) = two rounds, each an integrated merge\n  - 1. wave-cooperative register top-k (round 1, verified 7.7x alone) + single-dispatch host entry (1.06x alone) -> 31.3x only when hand-merged into one launcher; stacked unchanged they gave 17.1x\n  - 2. radix-select threshold seed + packed fp32 + SGPR addressing (round 2, 1.38x over round 1) and a lean builtin host fast path (~1.08x over round 1) -> 1.73x over round 1 together (disjoint files, unchanged launcher signature)\n  - note: attribution is incremental in landing order; host gains only surface once the kernel stops dominating.",
+      "verify": "Frozen-baseline A/B per shape and call path plus exact index parity vs a cdist+topk reference; confirm scratch is zero, dispatch count is one, and VALU per pair dropped (counter pass) before crediting the seed.",
+      "pitfall": "Two verified patches stacked unchanged reached about half the hand-merged speedup -> the host entry still reached the old multi-dispatch launcher -> merge so the new kernel is reached through the single-dispatch entry.\nA patch into the gitignored workspace silently did nothing -> git apply skips files under ignored paths without an error -> apply with patch -p1 and confirm the edits landed.\nHIP-graph replay lost on every case -> a single-dispatch op has no launch chain to amortize and replay costs about a bare launch -> measure the empty-graph replay floor first.\nMultiple queries per wave regressed -> doubled live VGPRs to save loads that already hit L2/vL1 -> keep one query per wave unless VGPRs stay low.",
+      "caution": "Also verify where per-wave time goes (an s_memtime phase probe) before tuning insertion further - after the seed, load+distance dominated insertion roughly 2:1; and check fill on mid shapes, where too few waves each walk many tiles serially.",
+      "source": "run team_knn_20261026_120638_2238851_5312 lane knn (HIP, gfx942), 2026-10-26, director_validation.json + tech_lead_report.md"
+    }
+  ]
+}

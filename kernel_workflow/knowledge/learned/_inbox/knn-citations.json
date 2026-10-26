@@ -1,0 +1,29 @@
+{
+  "run_id": "knn-citations",
+  "date": "2026-10-26",
+  "kernel_names": [
+    "knn"
+  ],
+  "validation_status": "accepted",
+  "box_quiet": true,
+  "held_out": false,
+  "cards": [],
+  "citations": [
+    {
+      "card": "decode-attention-the-python-ctypes-prologue-is-the-first-thr-attention-decode-gfx950-decode.md",
+      "round": 1,
+      "direction": "r1_d1",
+      "specialty": "host_runtime",
+      "cited_then_verified": 1.0555,
+      "became_winner": false
+    },
+    {
+      "card": "measure-the-empty-graph-replay-floor-before-funding-a-captur-attention-decode-gfx950-decode.md",
+      "round": 2,
+      "direction": "r2_d1",
+      "specialty": "host_runtime",
+      "cited_then_verified": 33.816,
+      "became_winner": false
+    }
+  ]
+}
